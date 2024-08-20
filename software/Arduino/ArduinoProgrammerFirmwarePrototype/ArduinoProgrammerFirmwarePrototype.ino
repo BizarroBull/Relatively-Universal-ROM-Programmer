@@ -73,11 +73,11 @@ void setup() {
   
   // Set all latch pins HIGH using direct port manipulation and disable ROM 
   PORTB |= RLSBLE | RMSBLE | ROM_OE | CTRL_LE | ROM_CE | USRBTN;
-delayMicroseconds(1);
+  delayMicroseconds(1);
   // Set all latch pins LOW using direct port manipulation
   PORTB &= ~(RLSBLE | RMSBLE | CTRL_LE); // Set pins D8, D9, D11 low
 
-    // Initialize the OLED display
+  // Initialize the OLED display
   if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
     latchControlByte(0x40);
     for(;;);
@@ -122,17 +122,17 @@ void loop() {
         display.print(currentCommand.blockSize);
         display.display();
         for (int i = 0; i < romsize/currentCommand.blockSize; i++) {
-        // Read data into buffer
-        for (uint16_t addr = 0; addr < currentCommand.blockSize; addr++) {
-          buffer[addr] = readAddress(cAddr);
-          cAddr++;
-        }
-        Serial.begin(baudrate);
-        Serial.write(0xAA);
-        for (uint16_t addr = 0; addr < currentCommand.blockSize; addr++) {
-          Serial.write(buffer[addr]);  
-        }
-        Serial.end();
+          // Read data into buffer
+          for (uint16_t addr = 0; addr < currentCommand.blockSize; addr++) {
+            buffer[addr] = readAddress(cAddr);
+            cAddr++;
+          }
+          Serial.begin(baudrate);
+          Serial.write(0xAA);
+          for (uint16_t addr = 0; addr < currentCommand.blockSize; addr++) {
+            Serial.write(buffer[addr]);  
+          }
+          Serial.end();
         }
       }
 
@@ -167,43 +167,28 @@ void loop() {
         while (1) { 
           Serial.write(0xAA);
           while (!Serial.available()) { 
-          ;; //Maybe we don't need it
-           }
+            ;; //Maybe we don't need it
+          }
           // Read the block of data
           size_t bytesRead = Serial.readBytes((char *)buffer, currentCommand.blockSize);
-            // Check if we've read the entire block
+          // Check if we've read the entire block
           if (bytesRead == currentCommand.blockSize) {
             // Process the buffer data
-           Serial.end();
-           delay(1);
-           writefromBuffer(cAddr, currentCommand.blockSize);
+            Serial.end();
+            delay(1);
+            writefromBuffer(cAddr, currentCommand.blockSize);
           } else {
             display.println("Bad block");
             break;
           }
           Serial.begin(baudrate);
           delay(1);
-          }
+        }
       }
     } 
   } else {
     handleButton();
     displayMenu();
-  /*
-  if (digitalRead(12) == 0) {
-    Serial.end();
-    enableRegulator();
-    display.println("Press RST after calibrating VEP");
-    while (1) {
-          displayVEP();
-          delay(17);
-      }
-    } else {
-      display.print(".");
-      display.display();
-      delay(500);
-    }
-  */
   } //Serial 0xAA
 
 } //Loop
@@ -215,14 +200,14 @@ void enableRegulator() {
 }
 
 void displayVEP() {
-    // Read voltage from analog pin A2
+  // Read voltage from analog pin A2
   int sensorValue = analogRead(A2);
- // Convert ADC reading to voltage (assuming 5V reference voltage)
+  // Convert ADC reading to voltage (assuming 5V reference voltage)
   float v_in = sensorValue * (V_REF / 1023.0);
   // Calculate voltage at VEP using voltage divider formula
   float v_vep = v_in * (R1 + R2) / R2;
 
-    // Display voltage on OLED display
+  // Display voltage on OLED display
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
@@ -236,17 +221,17 @@ void displayVEP() {
 
 //For single byte writes 
 void writeByte(uint16_t address, byte data) {
-latchAddress(address);
-latchControlByte(VPE_TO_VPP | REG_DISABLE);
-delay(50); //Settle before enabling
-latchControlByte(VPE_TO_VPP | REG_DISABLE | VPE_ENABLE );
-//delay(255); //What works on 65uino
-DDRD = 0xFF; //Output
-PORTD = data; 
-PORTB &= ~(ROM_CE);
-delayMicroseconds(101);
-PORTB |= ROM_CE;
-latchControlByte(0x00); 
+  latchAddress(address);
+  latchControlByte(VPE_TO_VPP | REG_DISABLE);
+  delay(50); //Settle before enabling
+  latchControlByte(VPE_TO_VPP | REG_DISABLE | VPE_ENABLE );
+  //delay(255); //What works on 65uino
+  DDRD = 0xFF; //Output
+  PORTD = data; 
+  PORTB &= ~(ROM_CE);
+  delayMicroseconds(101);
+  PORTB |= ROM_CE;
+  latchControlByte(0x00); 
 }
 
 void writefromBuffer(uint16_t addr, uint16_t len) {
@@ -263,16 +248,16 @@ void writefromBuffer(uint16_t addr, uint16_t len) {
 }
 
 void eraseW27C512(uint16_t romid) {
-if (getROMID() == romid) {
-  DDRD = 0xFF;
-  latchAddress(0x0000);
-  enableRegulator();
-  delay(100);
-  latchControlByte(A9_VPP_ENABLE | REG_DISABLE | VPE_ENABLE );
-  delay(500);
-  PORTB &= ~(ROM_CE);
-  delay(102);
-  PORTB |= ROM_CE;
+  if (getROMID() == romid) {
+    DDRD = 0xFF;
+    latchAddress(0x0000);
+    enableRegulator();
+    delay(100);
+    latchControlByte(A9_VPP_ENABLE | REG_DISABLE | VPE_ENABLE );
+    delay(500);
+    PORTB &= ~(ROM_CE);
+    delay(102);
+    PORTB |= ROM_CE;
   } else {
     display.println("ROM ID didn't match.");
     display.display();
@@ -292,7 +277,7 @@ uint16_t getROMID() {
   byteRead = readAddress(0x0001);
   romid |= byteRead;
   latchControlByte(0);
-return romid;
+  return romid;
 }
 
 byte readAddress(uint16_t addr) {
@@ -311,7 +296,7 @@ void latchControlByte(byte controlByte) {
   DDRD  = 0xFF ; // All output
   PORTD = controlByte;
 
-// Set CTRL_LE pin HIGH to latch
+  // Set CTRL_LE pin HIGH to latch
   PORTB |= CTRL_LE;
   // Set CTRL_LE pin LOW to unlatch
   PORTB &= ~(CTRL_LE);
@@ -397,39 +382,39 @@ void handleSelection(int index) {
   //Calibrate VEP", "Display ROM ID", "Blank check ROM", "Erase W27C512"
   switch (index) {
     case 0:
-          Serial.end();
-          enableRegulator();
-          while (1) {
-                display.println(F("Press RST after calibrating VEP"));
-                displayVEP();
-                delay(17);
-            }
+      Serial.end();
+      enableRegulator();
+      while (1) {
+        display.println(F("Press RST after calibrating VEP"));
+        displayVEP();
+        delay(17);
+      }
       break;
     case 1:
-          Serial.end();
+      Serial.end();
       display.clearDisplay();
       display.setCursor(0,0);
       display.print(F("Read ROM ID: "));
       display.println(getROMID(),HEX);
       display.display();
-           delay(3000);
+      delay(3000);
       break;
     case 2:
-     Serial.end();
-     display.clearDisplay();
-     display.setCursor(0,0);
-     if (blankCheck() == 0) display.println("ROM is blank");
-     display.display();
-     delay(3000);
+      Serial.end();
+      display.clearDisplay();
+      display.setCursor(0,0);
+      if (blankCheck() == 0) display.println("ROM is blank");
+      display.display();
+      delay(3000);
       break;
     case 3:
-     Serial.end();
-     display.clearDisplay();
-     display.setCursor(0,0);
-     display.println("Erasing ROM with ID 0xDA08 ");
-     eraseW27C512(0xDA08);
-     display.display();
-     delay(3000);
+      Serial.end();
+      display.clearDisplay();
+      display.setCursor(0,0);
+      display.println("Erasing ROM with ID 0xDA08 ");
+      eraseW27C512(0xDA08);
+      display.display();
+      delay(3000);
       break;
     default:
       break;
