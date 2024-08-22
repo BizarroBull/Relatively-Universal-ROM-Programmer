@@ -44,8 +44,14 @@ const int ANALOG_PIN = A2; // Analog pin connected to VEP
 #define RW            0b01000000
 #define REG_DISABLE   0b10000000
 
+const byte COM_HEADER =    0xAA;
+const byte COM_READROM =   0x01;
+const byte COM_WRITEROM =  0x02;
+const byte COM_ERASEROM =  0x03;
+const byte COM_READROMID = 0x04;
+const byte COM_READVEP =   0x05;
+
 uint32_t romsize = 4096; //We need to support more than 16 address bits
-byte pattern = 0xAA;
 uint16_t cAddr = 0;
 byte buffer[128]; 
 #define BUFFERSIZE 128
@@ -100,13 +106,13 @@ void setup() {
 void loop() {
   if (Serial.available()) {
     byte incomingByte = Serial.read();
-    if (incomingByte == 0xAA ) {
+    if (incomingByte == COM_HEADER ) {
       while (!Serial.available()) { 
         ;; //Maybe we don't need it
       }
       currentCommand.command = Serial.read(); 
 
-      if (currentCommand.command == 0x01) {
+      if (currentCommand.command == COM_READROM) {
         //Dump ROM via serial
         currentCommand.blockSize = Serial.read();
         byte cAddrL = Serial.read();
@@ -136,7 +142,7 @@ void loop() {
         }
       }
 
-      if (currentCommand.command == 0x03) {
+      if (currentCommand.command == COM_ERASEROM) {
         byte vendor = Serial.read();
         byte device = Serial.read();
         uint16_t romid = (static_cast<uint16_t>(vendor) << 8) | device;
@@ -149,7 +155,7 @@ void loop() {
         delay(3000);
       }
 
-      if (currentCommand.command == 0x02) { 
+      if (currentCommand.command == COM_WRITEROM) { 
         //Burn ROM from serial
         currentCommand.blockSize = Serial.read();
         currentCommand.stopPage = Serial.read();
@@ -185,7 +191,18 @@ void loop() {
           delay(1);
         }
       }
-    } 
+
+      if (currentCommand.command == COM_READROMID) {
+        Serial.end();
+        uint16_t romid = getROMID();
+
+        Serial.begin(baudrate);
+        Serial.write(COM_HEADER);
+        Serial.write(COM_READROMID);
+        Serial.write(romid & 0xFF);
+        Serial.write(romid >> 8);
+      }
+    }
   } else {
     handleButton();
     displayMenu();
@@ -277,6 +294,7 @@ uint16_t getROMID() {
   byteRead = readAddress(0x0001);
   romid |= byteRead;
   latchControlByte(0);
+  delay(50);
   return romid;
 }
 
