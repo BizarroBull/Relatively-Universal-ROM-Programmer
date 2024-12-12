@@ -127,7 +127,6 @@ void loop() {
             buffer[addr] = readAddress(cAddr);
             cAddr++;
           }
-          delay(1); // Delay for 1ms before Serial calls.
           Serial.begin(baudrate);
           Serial.write(0xAA);
           for (uint16_t addr = 0; addr < currentCommand.blockSize; addr++) {
@@ -135,7 +134,6 @@ void loop() {
           }
           Serial.end();
         }
-        Serial.begin(baudrate);
       }
 
       if (currentCommand.command == 0x03) {
@@ -149,7 +147,6 @@ void loop() {
         display.display();
         eraseW27C512(romid);
         delay(3000);
-        Serial.begin(baudrate);
       }
 
       if (currentCommand.command == 0x02) { 
@@ -158,10 +155,9 @@ void loop() {
         currentCommand.stopPage = Serial.read();
         Serial.end();
         display.clearDisplay();
-        display.setCursor(0,0);
         display.println(F("Burning ROM from serial..."));
         display.print("Blocksize: ");
-        display.println(currentCommand.blockSize);
+        display.print(currentCommand.blockSize);
         display.display();
         latchControlByte(VPE_TO_VPP | REG_DISABLE);
         delay(50); //Settle before enabling
@@ -170,6 +166,9 @@ void loop() {
         Serial.begin(baudrate);
         while (1) { 
           Serial.write(0xAA);
+          while (!Serial.available()) { 
+            ;; //Maybe we don't need it
+          }
           // Read the block of data
           size_t bytesRead = Serial.readBytes((char *)buffer, currentCommand.blockSize);
           // Check if we've read the entire block
@@ -179,9 +178,7 @@ void loop() {
             delay(1);
             writefromBuffer(cAddr, currentCommand.blockSize);
           } else {
-            display.println("Burn complete");
-            display.display();
-            delay(3000);
+            display.println("Bad block");
             break;
           }
           Serial.begin(baudrate);
